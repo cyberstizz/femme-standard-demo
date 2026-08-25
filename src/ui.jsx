@@ -35,6 +35,9 @@ const PATHS = {
   ),
   chart: <path d="M4 20 V12 M10 20 V5 M16 20 V9 M22 20 H3" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />,
   check: <path d="M5 12.5 L10 17.5 L19 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  chev: <path d="M9 5 L16 12 L9 19" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />,
+  grid: <path d="M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />,
+  cog: <><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.4"/><path d="M12 3v2.2M12 18.8V21M4.2 12H2m20 0h-2.2M6 6l1.6 1.6M16.4 16.4 18 18M18 6l-1.6 1.6M7.6 16.4 6 18" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></>,
 }
 
 export function Icon({ name, size = 20, ...rest }) {
@@ -170,5 +173,32 @@ export function Empty({ title, body, action, to }) {
         </Link>
       )}
     </div>
+  )
+}
+
+/* ---------------- admin bottom nav ---------------- */
+const ADMIN_TABS = [
+  { to: '/admin', label: 'Home', icon: 'home' },
+  { to: '/admin/pieces', label: 'Pieces', icon: 'grid' },
+  { to: '/admin/orders', label: 'Orders', icon: 'box' },
+  { to: '/admin/categories', label: 'Categories', icon: 'filter' },
+  { to: '/admin/settings', label: 'Settings', icon: 'cog' },
+]
+
+export function AdminNav() {
+  const { orders } = useStore()
+  const toShip = orders.filter((o) => !o.packed.label).length
+  return (
+    <nav className="tabs admin">
+      {ADMIN_TABS.map((t) => (
+        <NavLink key={t.to} to={t.to} end={t.to === '/admin'} className={({ isActive }) => `tab${isActive ? ' on' : ''}`}>
+          <span style={{ position: 'relative' }}>
+            <Icon name={t.icon} />
+            {t.to === '/admin/orders' && toShip > 0 && <i className="tally">{toShip}</i>}
+          </span>
+          {t.label}
+        </NavLink>
+      ))}
+    </nav>
   )
 }
