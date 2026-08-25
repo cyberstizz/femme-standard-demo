@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react'
-import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useStore, compressImage } from '../store'
 import { Icon } from '../ui'
-import { CONDITIONS, CATEGORIES } from '../data/pieces'
+import { CONDITIONS } from '../data/pieces'
 
 const blank = {
   title: '',
-  category: 'Dresses',
+  categoryId: '',
   size: 'M',
   condition: 'Excellent',
   price: '',
@@ -20,12 +20,12 @@ const blank = {
 
 export default function ListPiece() {
   const nav = useNavigate()
-  const [params] = useSearchParams()
-  const { byId, savePiece } = useStore()
+  const { id: routeId } = useParams()
+  const { byId, savePiece, categories, deletePiece } = useStore()
   const fileRef = useRef(null)
   const [busy, setBusy] = useState(false)
 
-  const editing = params.get('edit') ? byId(params.get('edit')) : null
+  const editing = routeId ? byId(routeId) : null
   const [f, setF] = useState(() =>
     editing
       ? {
@@ -37,7 +37,7 @@ export default function ListPiece() {
           length: editing.measurements?.length ?? '',
           photos: editing.photos ?? [],
         }
-      : blank,
+      : { ...blank, categoryId: categories[0]?.id ?? '' },
   )
 
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
@@ -65,12 +65,12 @@ export default function ListPiece() {
     savePiece({
       id,
       title: f.title.trim() || 'Untitled piece',
-      category: f.category,
+      categoryId: f.categoryId,
       size: f.size,
       condition: f.condition,
       price: Number(f.price) || 0,
       photos: f.photos,
-      silhouette: editing?.silhouette ?? silhouetteFor(f.category),
+      silhouette: editing?.silhouette ?? silhouetteFor(f.categoryId, categories),
       status,
       views: editing?.views ?? 0,
       saves: editing?.saves ?? 0,
@@ -82,7 +82,7 @@ export default function ListPiece() {
           ? { ...(f.bust && { bust: f.bust }), ...(f.waist && { waist: f.waist }), ...(f.length && { length: f.length }) }
           : null,
     })
-    nav('/owner')
+    nav('/admin/pieces')
   }
 
   const canAddMore = f.photos.length < 8
@@ -152,9 +152,11 @@ export default function ListPiece() {
           <div className="two">
             <div className="field">
               <div className="lb">Category</div>
-              <select className="input" value={f.category} onChange={set('category')}>
-                {CATEGORIES.map((c) => (
-                  <option key={c}>{c}</option>
+              <select className="input" value={f.categoryId} onChange={set('categoryId')}>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -200,7 +202,7 @@ export default function ListPiece() {
       </div>
 
       <div className="cta">
-        <Link className="btn quiet narrow" to="/owner">
+        <Link className="btn quiet narrow" to="/admin/pieces">
           Cancel
         </Link>
         <button className="btn" disabled={!ready} onClick={() => publish('live')}>
@@ -211,9 +213,8 @@ export default function ListPiece() {
   )
 }
 
-function silhouetteFor(category) {
-  return (
-    { Dresses: 'dress', Tops: 'top', Bottoms: 'pants', Outerwear: 'blazer', Bags: 'bag', Shoes: 'heel' }[category] ??
-    'dress'
-  )
+// The stand-in drawing comes from whichever category the piece is filed under,
+// so adding a new category automatically gives its pieces the right placeholder.
+function silhouetteFor(categoryId, categories) {
+  return categories.find((c) => c.id === categoryId)?.silhouette ?? 'dress'
 }
