@@ -12,7 +12,7 @@ export default function Standard() {
     <>
       <div className="view">
         <div className="st-hero">
-          <img src={latavia} alt="Latavia, founder of The Femme Standard" style={{vw: 100}} />
+          <img src={latavia} alt="Latavia, founder of The Femme Standard" style={{width: "100vw"}} />
           <div className="veil" />
           <div className="cap">
             <div className="k">The Standard</div>
