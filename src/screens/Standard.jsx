@@ -4,7 +4,7 @@ import { Shot, TabBar } from '../ui'
 import latavia from '../assets/latavia.jpg'
 
 export default function Standard() {
-  const { pieces } = useStore()
+  const { pieces, settings } = useStore()
   const live = pieces.filter((p) => p.status === 'live')
   const three = live.slice(0, 3)
 
@@ -12,30 +12,21 @@ export default function Standard() {
     <>
       <div className="view">
         <div className="st-hero">
-          <img src={latavia} alt="Latavia, founder of The Femme Standard" style={{width: "100vw"}} />
+          <img src={latavia} alt="Latavia, founder of The Femme Standard" />
           <div className="veil" />
           <div className="cap">
-            <div className="k">The Standard</div>
-            <h4>
-              Pieces that still deserve their <em>moment</em>
-            </h4>
+            <div className="k">{settings.storyEyebrow}</div>
+            <h4>{settings.storyTitle}</h4>
           </div>
         </div>
 
         <div className="st-body">
-          <blockquote className="pull">
-            I believe fashion should empower you to show up fully as yourself — without excess, without compromise.
-          </blockquote>
-          <div className="attrib">Latavia · Founder</div>
+          <blockquote className="pull">{settings.quote}</blockquote>
+          <div className="attrib">{settings.quoteBy}</div>
 
-          <p>
-            Every piece here is slightly worn, high quality, and one of one. Nothing is restocked. When it's gone, it's
-            gone.
-          </p>
-          <p>
-            Each one is measured flat and photographed as it is, marks and all. You should know exactly what's arriving
-            before you buy it.
-          </p>
+          {settings.storyBody.split(/\n\s*\n/).map((para, i) => (
+            <p key={i}>{para}</p>
+          ))}
 
           <div className="mini">
             {three.map((p) => (
