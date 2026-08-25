@@ -15,7 +15,7 @@ export default function Ship() {
   const { orders, byId, togglePacked } = useStore()
   const order = orders.find((o) => String(o.ref) === String(ref))
 
-  if (!order) return <Empty title="Order not found" body="It may have been cleared with the demo data." action="Back to closet" to="/owner" />
+  if (!order) return <Empty title="Order not found" body="It may have been cleared with the demo data." action="Back to closet" to="/admin/orders" />
 
   const pieces = order.ids.map(byId).filter(Boolean)
   const total = pieces.reduce((n, p) => n + p.price, 0)
@@ -83,10 +83,10 @@ export default function Ship() {
       </div>
 
       <div className="cta">
-        <Link className="btn quiet narrow" to="/owner">
-          Closet
+        <Link className="btn quiet narrow" to="/admin/orders">
+          Orders
         </Link>
-        <button className="btn" onClick={() => (done ? nav('/owner') : togglePacked(order.ref, 'label'))}>
+        <button className="btn" onClick={() => (done ? nav('/admin/orders') : togglePacked(order.ref, 'label'))}>
           <Icon name="box" size={17} />
           {done ? 'Shipped' : 'Buy label · $5.85'}
         </button>
