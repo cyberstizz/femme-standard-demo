@@ -6,7 +6,7 @@ import { Icon, Shot, Empty } from '../ui'
 export default function Piece() {
   const { id } = useParams()
   const nav = useNavigate()
-  const { byId, addToBag, inBag, isSaved, toggleSaved } = useStore()
+  const { byId, addToBag, inBag, isSaved, toggleSaved, settings } = useStore()
   const [shot, setShot] = useState(0)
 
   const piece = byId(id)
@@ -51,7 +51,7 @@ export default function Piece() {
         <div className="detail">
           <div className="d-name">{piece.title}</div>
           <div className="d-price">{money(piece.price)}</div>
-          <div className="d-ship">Free shipping · Ships from Miami in 1–2 days</div>
+          <div className="d-ship">Free shipping · Ships from {settings.shipFrom} in 1–2 days</div>
 
           <div className="rule" />
           <div className="factbar">
@@ -116,7 +116,7 @@ export default function Piece() {
           </Link>
         ) : (
           <button className="btn" onClick={() => { addToBag(piece.id); nav('/bag') }}>
-            Add to bag · holds 15 min
+            Add to bag · holds {settings.holdMinutes} min
           </button>
         )}
         <button
