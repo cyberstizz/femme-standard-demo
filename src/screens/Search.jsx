@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useStore } from '../store'
 import { Icon, Tile, TabBar } from '../ui'
-import { CONDITIONS, SIZES, CATEGORIES } from '../data/pieces'
+import { CONDITIONS, SIZES } from '../data/pieces'
 
 export default function Search() {
-  const { pieces, mySize, setMySize } = useStore()
+  const { pieces, mySize, setMySize, categories } = useStore()
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
   const [sizes, setSizes] = useState([mySize])
@@ -17,10 +17,10 @@ export default function Search() {
   const results = pieces
     .filter((p) => p.status !== 'draft')
     .filter((p) => (hideSold ? p.status === 'live' : true))
-    .filter((p) => (q ? (p.title + p.category + p.fabric).toLowerCase().includes(q.toLowerCase()) : true))
+    .filter((p) => (q ? (p.title + p.fabric).toLowerCase().includes(q.toLowerCase()) : true))
     .filter((p) => (sizes.length ? sizes.includes(p.size) : true))
     .filter((p) => (conds.length ? conds.includes(p.condition) : true))
-    .filter((p) => (cat === 'Any' ? true : p.category === cat))
+    .filter((p) => (cat === 'Any' ? true : p.categoryId === cat))
 
   const clear = () => { setSizes([]); setConds([]); setCat('Any'); setHideSold(true) }
 
@@ -93,12 +93,12 @@ export default function Search() {
 
                 <div className="frow bare" style={{ marginTop: 16 }}>
                   <span>Category</span>
-                  <em>{cat}</em>
+                  <em>{cat === 'Any' ? 'Any' : categories.find((c) => c.id === cat)?.name}</em>
                 </div>
                 <div className="chips">
-                  {['Any', ...CATEGORIES].map((c) => (
-                    <button key={c} className={`pill sm${cat === c ? ' on' : ''}`} onClick={() => setCat(c)}>
-                      {c}
+                  {[{ id: 'Any', name: 'Any' }, ...categories].map((c) => (
+                    <button key={c.id} className={`pill sm${cat === c.id ? ' on' : ''}`} onClick={() => setCat(c.id)}>
+                      {c.name}
                     </button>
                   ))}
                 </div>
