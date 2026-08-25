@@ -3,8 +3,11 @@ import { useStore } from '../store'
 import { TabBar } from '../ui'
 import { SIZES } from '../data/pieces'
 
+const initials = (n) =>
+  n.split(' ').slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('')
+
 export default function Account() {
-  const { saved, orders, mySize, setMySize, alerts, setAlerts, pieces } = useStore()
+  const { saved, orders, mySize, setMySize, alerts, setAlerts, pieces, user, signOut, isOwner } = useStore()
   const inTransit = orders.length
   const savedSelling = pieces.filter((p) => saved.includes(p.id) && p.saves > 10).length
 
@@ -12,10 +15,10 @@ export default function Account() {
     <>
       <div className="view">
         <div className="acct">
-          <div className="avatar">JM</div>
-          <h5>Jasmine M.</h5>
-          <div className="sub">Member since 2025</div>
-          <div className="tier">◆ First look · 24h early access</div>
+          <div className="avatar">{user ? initials(user.name) : '—'}</div>
+          <h5>{user ? user.name : 'Not signed in'}</h5>
+          <div className="sub">{user ? user.email : 'Sign in to buy and save pieces'}</div>
+          {user && <div className="tier">◆ First look · 24h early access</div>}
         </div>
 
         <div className="stats">
@@ -59,9 +62,20 @@ export default function Account() {
           <Link className="mrow" to="/standard">
             About The Femme Standard <span>▸</span>
           </Link>
-          <Link className="mrow" to="/owner">
-            Owner view <span className="g">Latavia only</span>
-          </Link>
+          {user ? (
+            <button className="mrow" onClick={signOut}>
+              Sign out <span>▸</span>
+            </button>
+          ) : (
+            <Link className="mrow" to="/signin">
+              Sign in <span className="g">Needed to buy</span>
+            </Link>
+          )}
+          {isOwner && (
+            <Link className="mrow" to="/admin">
+              Shop admin <span className="g">Your shop</span>
+            </Link>
+          )}
         </div>
       </div>
 
