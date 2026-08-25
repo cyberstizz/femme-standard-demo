@@ -2,9 +2,6 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useStore, useCountdown, money } from '../store'
 import { Shot, TabBar, Empty } from '../ui'
 
-const FREE_OVER = 150
-const TAX = 0.07
-
 function BagLine({ entry }) {
   const { byId, removeFromBag } = useStore()
   const piece = byId(entry.id)
@@ -32,20 +29,21 @@ function BagLine({ entry }) {
 }
 
 export default function Bag() {
-  const { bag, byId, checkout } = useStore()
+  const { bag, byId, checkout, settings, user } = useStore()
   const nav = useNavigate()
 
   const items = bag.map((b) => ({ b, p: byId(b.id) })).filter((x) => x.p)
   const subtotal = items.reduce((n, x) => n + x.p.price, 0)
-  const shipping = subtotal >= FREE_OVER || subtotal === 0 ? 0 : 8
-  const tax = subtotal * TAX
+  const shipping = subtotal >= settings.freeShippingOver || subtotal === 0 ? 0 : 8
+  const tax = subtotal * settings.taxRate
   const total = subtotal + shipping + tax
 
   const soonest = bag.length ? Math.min(...bag.map((b) => b.heldUntil)) : 0
   const { label } = useCountdown(soonest)
 
   const place = () => {
-    const ref = checkout({ name: 'Jasmine Moore', line1: '1420 NW 62nd St, Apt 3B', city: 'Miami, FL 33142' })
+    if (!user) return nav('/signin?next=/bag')
+    const ref = checkout({ name: user.name, line1: '1420 NW 62nd St, Apt 3B', city: 'Miami, FL 33142' })
     nav(`/confirmed/${ref}`)
   }
 
@@ -82,7 +80,7 @@ export default function Bag() {
               <div>
                 <span>Shipping</span>
                 <span style={{ color: shipping === 0 ? 'var(--gold)' : undefined }}>
-                  {shipping === 0 ? `Free over ${money(FREE_OVER)}` : money(shipping)}
+                  {shipping === 0 ? `Free over ${money(settings.freeShippingOver)}` : money(shipping)}
                 </span>
               </div>
               <div>
@@ -106,7 +104,7 @@ export default function Bag() {
       {items.length > 0 && (
         <div className="cta">
           <button className="btn" onClick={place}>
-            Checkout · {money(total)}
+            {user ? `Checkout · ${money(total)}` : 'Sign in to check out'}
           </button>
         </div>
       )}
