@@ -12,7 +12,7 @@ import Standard from './screens/Standard'
 import Account from './screens/Account'
 import SignIn from './screens/SignIn'
 
-import AdminSignIn from './screens/AdminSignIn'
+import AdminSignIn from './screens/AdminSignIn.jsx'
 import AdminHome from './screens/AdminHome'
 import AdminPieces from './screens/AdminPieces'
 import AdminCategories from './screens/AdminCategories.jsx'
