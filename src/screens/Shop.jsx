@@ -2,10 +2,9 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../store'
 import { Icon, Tile, TabBar } from '../ui'
-import { CATEGORIES } from '../data/pieces'
 
 export default function Shop() {
-  const { pieces, bag, mySize } = useStore()
+  const { pieces, bag, mySize, categories, settings } = useStore()
   const [filter, setFilter] = useState('All')
 
   const visible = pieces
@@ -13,7 +12,7 @@ export default function Shop() {
     .filter((p) => {
       if (filter === 'All') return true
       if (filter === 'My size') return p.size === mySize && p.status === 'live'
-      return p.category === filter
+      return p.categoryId === filter
     })
 
   const liveCount = pieces.filter((p) => p.status === 'live').length
@@ -22,7 +21,7 @@ export default function Shop() {
     <>
       <div className="appbar">
         <div className="logo">
-          Femme <b>Standard</b>
+          {settings.storeName.replace(/^The /, '')}
         </div>
         <div className="icons">
           <Link to="/saved" aria-label="Saved">
@@ -41,9 +40,9 @@ export default function Shop() {
       </Link>
 
       <div className="pills">
-        {['All', 'My size', ...CATEGORIES].map((c) => (
-          <button key={c} className={`pill${filter === c ? ' on' : ''}`} onClick={() => setFilter(c)}>
-            {c}
+        {[{ id: 'All', name: 'All' }, { id: 'My size', name: 'My size' }, ...categories].map((c) => (
+          <button key={c.id} className={`pill${filter === c.id ? ' on' : ''}`} onClick={() => setFilter(c.id)}>
+            {c.name}
           </button>
         ))}
       </div>
