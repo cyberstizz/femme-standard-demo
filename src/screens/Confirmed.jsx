@@ -1,10 +1,18 @@
+import { useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useStore } from '../store'
 import { Icon } from '../ui'
 
 export default function Confirmed() {
   const { ref } = useParams()
-  const { orders } = useStore()
+  const { orders, refresh } = useStore()
+
+  // Coming back from Stripe, the webhook may have landed moments ago.
+  useEffect(() => {
+    refresh()
+    const t = setTimeout(refresh, 2500)
+    return () => clearTimeout(t)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const order = orders.find((o) => String(o.ref) === String(ref))
 
   return (
