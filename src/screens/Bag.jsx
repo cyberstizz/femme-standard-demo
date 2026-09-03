@@ -47,8 +47,13 @@ export default function Bag() {
     if (!user) return nav('/signin?next=/bag')
     setPlacing(true)
     try {
-      const ref = await checkout({ name: user.name, line1: '1420 NW 62nd St, Apt 3B', city: 'Miami, FL 33142' })
-      nav(`/confirmed/${ref}`)
+      const result = await checkout({ name: user.name, email: user.email })
+      if (result.stripeUrl) {
+        // Stripe collects the card and the shipping address on its own page.
+        window.location.href = result.stripeUrl
+        return
+      }
+      nav(`/confirmed/${result.ref}`)
     } catch {
       setPlacing(false)
     }
@@ -111,7 +116,7 @@ export default function Bag() {
       {items.length > 0 && (
         <div className="cta">
           <button className="btn" onClick={place} disabled={placing}>
-            {placing ? 'Placing order…' : user ? `Checkout · ${money(total)}` : 'Sign in to check out'}
+            {placing ? 'Taking you to payment…' : user ? `Checkout · ${money(total)}` : 'Sign in to check out'}
           </button>
         </div>
       )}
