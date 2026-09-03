@@ -18,13 +18,10 @@ a{color:inherit;text-decoration:none}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 /* ---------- shell ---------- */
-.app{
-  max-width:460px;margin:0 auto;min-height:100dvh;height:100dvh;
-  display:flex;flex-direction:column;background:var(--ink);
-  border-left:1px solid rgba(245,241,232,.05);border-right:1px solid rgba(245,241,232,.05);
-  overflow:hidden;position:relative;
-}
-.view{flex:1;overflow-y:auto;overscroll-behavior:contain}
+.app{min-height:100dvh;height:100dvh;display:flex;flex-direction:column;background:var(--ink)}
+.main{flex:1;min-height:0;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.view{flex:1;overflow-y:auto;overscroll-behavior:contain;position:relative}
+.site-header,.admin-side{display:none}
 .pad{padding:0 18px}
 .spacer{height:22px}
 
@@ -346,15 +343,6 @@ select.input{appearance:none;background-image:none}
 textarea.input{resize:vertical;line-height:1.55}
 .hint{font-size:11.5px;color:var(--muted);margin-top:9px;line-height:1.5}
 
-/* ---------- desktop presentation ---------- */
-@media (min-width:760px){
-  body{background:radial-gradient(80% 60% at 50% 0%,#111010 0%,#060606 70%)}
-  .app{
-    height:min(880px,100dvh);margin:clamp(0px,3dvh,28px) auto;
-    border-radius:26px;border:1px solid rgba(201,162,39,.18);
-    box-shadow:0 30px 70px rgba(0,0,0,.7);
-  }
-}
 
 /* ---------- admin ---------- */
 .linkout{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
@@ -409,3 +397,113 @@ textarea.input{resize:vertical;line-height:1.55}
 }
 .gate-av img{width:100%;height:100%;object-fit:cover;object-position:50% 14%}
 .demo a{font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;text-decoration:underline}
+
+
+/* =====================================================================
+   Tablet
+   ===================================================================== */
+@media (min-width:640px){
+  .grid{grid-template-columns:repeat(3,1fr);gap:22px 16px;padding:0 22px 28px}
+}
+
+/* =====================================================================
+   Desktop — real layout, not a phone preview
+   ===================================================================== */
+@media (min-width:900px){
+  .app{height:auto;min-height:100dvh}
+  .main{overflow:visible;min-height:0}
+  .view{overflow:visible;flex:none}
+  .tabs{display:none}
+  .demo{position:sticky;top:0;z-index:20}
+
+  /* ---- shopper header ---- */
+  .site-header{
+    display:flex;align-items:center;justify-content:space-between;gap:32px;
+    padding:0 40px;height:68px;border-bottom:1px solid var(--hair);
+    background:var(--ink);position:sticky;top:0;z-index:10;
+  }
+  .site-header .logo{font-size:19px;letter-spacing:.16em}
+  .site-nav{display:flex;gap:30px}
+  .site-nav a{font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);padding:6px 0;border-bottom:1px solid transparent}
+  .site-nav a.on{color:var(--bone);border-bottom-color:var(--gold)}
+  .site-tools{display:flex;align-items:center;gap:22px}
+  .site-tools a{display:flex;align-items:center;gap:8px;color:var(--bone);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;position:relative}
+  .site-tools a.signin{border:1px solid var(--gold);color:var(--gold);padding:8px 16px;border-radius:2px}
+  .site-tools a.admin{color:var(--gold)}
+  .site-tools .tally{top:-6px;right:-9px}
+
+  /* per-screen mobile bars become page headings */
+  .appbar{max-width:1240px;margin:0 auto;width:100%;padding:34px 40px 18px}
+  .appbar .logo{display:none}
+  .appbar.hide-desktop{display:none}
+  .appbar .title{font-size:28px;letter-spacing:.02em;text-transform:none}
+  .searchbar{max-width:1160px;margin:0 auto 14px;width:calc(100% - 80px)}
+  .pills{max-width:1240px;margin:0 auto;width:100%;padding:0 40px 18px}
+  .strip{max-width:1160px;margin:0 auto 24px;width:calc(100% - 80px)}
+  .grid{max-width:1240px;margin:0 auto;width:100%;padding:0 40px 60px;grid-template-columns:repeat(4,1fr);gap:34px 22px}
+  .storylink{padding:0 0 60px}
+  .resultline{max-width:1240px;margin:0 auto;width:100%;padding:0 40px 16px}
+  .empty{max-width:520px;margin:0 auto}
+
+  /* narrow reading pages */
+  .pad,.form,.menu,.acct,.stats,.sizepick,.ship-h,.kpis,.ownerbar{max-width:760px;margin-left:auto;margin-right:auto;width:100%}
+  .pad,.form{padding-left:40px;padding-right:40px}
+  .cta{max-width:760px;margin:0 auto;width:100%;padding:18px 40px 40px;border-top:none;position:static}
+
+  /* ---- piece: two columns ---- */
+  .piece-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(380px,.85fr);gap:56px;max-width:1240px;margin:0 auto;padding:36px 40px 60px;align-items:start}
+  .piece-layout .hero{aspect-ratio:4/5;border-radius:3px;position:sticky;top:92px}
+  .piece-layout .detail{padding:0}
+  .piece-layout .cta{padding:22px 0 0;max-width:none}
+  .piece-layout .d-name{font-size:34px}
+  .piece-layout .d-price{font-size:36px}
+
+  /* ---- filters become a side panel ---- */
+  .scrim{position:fixed;inset:0;z-index:30}
+  .sheet{position:fixed;top:0;bottom:0;right:0;left:auto;width:440px;border-top:none;border-left:1px solid var(--gold);border-radius:0;padding:32px;z-index:31}
+
+  /* ---- story ---- */
+  .story-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);max-width:1240px;margin:0 auto;padding:36px 40px 40px;gap:60px;align-items:start}
+  .story-layout .st-hero{height:auto;aspect-ratio:4/5;border-radius:3px;position:sticky;top:92px}
+  .story-layout .st-hero h4{font-size:38px}
+  .story-layout .st-body{padding:12px 0 0}
+  .story-layout .pull{font-size:24px}
+
+  /* ---- sign-in gates as cards ---- */
+  .gate{max-width:460px;margin:70px auto;border:1px solid var(--hair);padding:48px 40px;border-radius:3px;background:var(--onyx)}
+
+  /* ---- admin: sidebar + content ---- */
+  .app.is-admin{flex-direction:row;align-items:stretch}
+  .app.is-admin .demo{position:fixed;left:0;right:0;top:0}
+  .admin-side{
+    display:flex;flex-direction:column;width:250px;flex:0 0 250px;
+    border-right:1px solid var(--hair);padding:36px 22px 28px;position:sticky;top:0;height:100dvh;
+    background:var(--ink);
+  }
+  .app.is-admin.has-demo .admin-side{padding-top:70px}
+  .app.is-admin.has-demo .main{padding-top:34px}
+  .admin-side .who{margin-bottom:34px}
+  .admin-side nav{display:flex;flex-direction:column;gap:4px}
+  .admin-side nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:2px;color:var(--muted);font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;position:relative}
+  .admin-side nav a.on{color:var(--gold);background:var(--onyx)}
+  .admin-side nav a .tally{position:static;margin-left:auto}
+  .admin-side .foot{margin-top:auto;display:flex;flex-direction:column;gap:14px}
+  .admin-side .foot a,.admin-side .foot button{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .app.is-admin .main{flex:1;min-width:0}
+  .app.is-admin .ownerbar{display:none}
+  .app.is-admin .kpis{margin-top:36px;border:1px solid var(--hair)}
+  .app.is-admin .appbar,.app.is-admin .pills{max-width:760px;padding-top:40px}
+  .app.is-admin .pills{padding-top:0}
+  .catrow,.taskrow,.orow{max-width:none}
+}
+
+@media (min-width:1300px){
+  .grid{grid-template-columns:repeat(5,1fr)}
+}
+
+/* sign-in demo hint */
+.demo-hint{margin-top:22px;padding:12px 14px;border:1px dashed var(--line);font-size:12px;color:var(--muted);line-height:1.7;text-align:left}
+.demo-hint b{display:block;font-weight:500;font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:4px}
+.linkbtn{color:var(--gold);text-decoration:underline;font-size:12px}
+/* piece CTA stays pinned on mobile even though it now lives inside the scroll view */
+.piece-layout .cta{position:sticky;bottom:0;z-index:2}

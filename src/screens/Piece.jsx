@@ -21,6 +21,8 @@ export default function Piece() {
   return (
     <>
       <div className="view">
+        <div className="piece-layout">
+        <div className="piece-media">
         <div className="hero">
           {piece.photos?.length ? (
             <img src={piece.photos[shot]} alt={piece.title} />
@@ -47,7 +49,9 @@ export default function Piece() {
             </div>
           )}
         </div>
+        </div>
 
+        <div className="piece-info">
         <div className="detail">
           <div className="d-name">{piece.title}</div>
           <div className="d-price">{money(piece.price)}</div>
@@ -103,9 +107,8 @@ export default function Piece() {
             This piece is one of one. Nothing here is restocked — when it sells, it comes off the shop for good.
           </p>
         </div>
-      </div>
 
-      <div className="cta">
+        <div className="cta">
         {sold ? (
           <Link to="/" className="btn off" style={{ pointerEvents: 'none' }}>
             Sold
@@ -126,6 +129,9 @@ export default function Piece() {
         >
           <Icon name={saved ? 'heartFill' : 'heart'} />
         </button>
+        </div>
+        </div>
+        </div>
       </div>
     </>
   )

@@ -71,11 +71,12 @@ export default function Account() {
               Sign in <span className="g">Needed to buy</span>
             </Link>
           )}
-          {isOwner && (
-            <Link className="mrow" to="/admin">
-              Shop admin <span className="g">Your shop</span>
-            </Link>
-          )}
+          {/* Visible to everyone while this is a demo — Latavia has to be able to
+              find her own admin on her own phone. Once Supabase auth is in, wrap
+              this in {isOwner && ...} so shoppers never see it. */}
+          <Link className="mrow" to={isOwner ? '/admin' : '/signin?next=/admin'}>
+            Shop admin <span className="g">{isOwner ? 'Your shop' : 'Owner sign-in'}</span>
+          </Link>
         </div>
       </div>
 

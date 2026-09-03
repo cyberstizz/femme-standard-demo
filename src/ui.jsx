@@ -202,3 +202,80 @@ export function AdminNav() {
     </nav>
   )
 }
+
+/* ---------------- desktop header (shopper) ---------------- */
+export function SiteHeader() {
+  const { bag, user, isOwner, settings } = useStore()
+  const nav = [
+    { to: '/', label: 'Shop', end: true },
+    { to: '/standard', label: 'The Standard' },
+    { to: '/search', label: 'Search' },
+  ]
+  return (
+    <header className="site-header">
+      <Link to="/" className="logo">
+        {settings.storeName.replace(/^The /, '')}
+      </Link>
+      <nav className="site-nav">
+        {nav.map((n) => (
+          <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => (isActive ? 'on' : undefined)}>
+            {n.label}
+          </NavLink>
+        ))}
+      </nav>
+      <div className="site-tools">
+        <Link to="/saved" aria-label="Saved">
+          <Icon name="heart" size={19} />
+        </Link>
+        <Link to="/bag" aria-label="Bag">
+          <Icon name="bag" size={19} />
+          {bag.length > 0 && <i className="tally">{bag.length}</i>}
+        </Link>
+        {isOwner && (
+          <Link to="/admin" className="admin">
+            Admin
+          </Link>
+        )}
+        {user ? (
+          <Link to="/account">
+            <Icon name="user" size={19} />
+            {user.name.split(' ')[0]}
+          </Link>
+        ) : (
+          <Link to="/signin" className="signin">
+            Sign in
+          </Link>
+        )}
+      </div>
+    </header>
+  )
+}
+
+/* ---------------- desktop sidebar (admin) ---------------- */
+export function AdminSidebar() {
+  const { orders, signOut, settings } = useStore()
+  const toShip = orders.filter((o) => !o.packed.label).length
+  return (
+    <aside className="admin-side">
+      <div className="who">
+        <div>
+          <b>{settings.storeName}</b>
+          <em>Admin</em>
+        </div>
+      </div>
+      <nav>
+        {ADMIN_TABS.map((t) => (
+          <NavLink key={t.to} to={t.to} end={t.to === '/admin'} className={({ isActive }) => (isActive ? 'on' : undefined)}>
+            <Icon name={t.icon} size={18} />
+            {t.label}
+            {t.to === '/admin/orders' && toShip > 0 && <i className="tally">{toShip}</i>}
+          </NavLink>
+        ))}
+      </nav>
+      <div className="foot">
+        <Link to="/">← View shop</Link>
+        <button onClick={signOut}>Sign out</button>
+      </div>
+    </aside>
+  )
+}

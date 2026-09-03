@@ -11,6 +11,7 @@ export default function Standard() {
   return (
     <>
       <div className="view">
+        <div className="story-layout">
         <div className="st-hero">
           <img src={latavia} alt="Latavia, founder of The Femme Standard" />
           <div className="veil" />
@@ -35,6 +36,7 @@ export default function Standard() {
               </Link>
             ))}
           </div>
+        </div>
         </div>
       </div>
 

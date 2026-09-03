@@ -4,7 +4,7 @@ import { useStore } from '../store'
 import { Icon, Tile, TabBar } from '../ui'
 
 export default function Shop() {
-  const { pieces, bag, mySize, categories, settings } = useStore()
+  const { pieces, bag, mySize, categories, settings, user, isOwner } = useStore()
   const [filter, setFilter] = useState('All')
 
   const visible = pieces
@@ -19,11 +19,22 @@ export default function Shop() {
 
   return (
     <>
-      <div className="appbar">
+      <div className="appbar hide-desktop">
         <div className="logo">
           {settings.storeName.replace(/^The /, '')}
         </div>
         <div className="icons">
+          {isOwner ? (
+            <Link to="/admin" className="linkout">
+              Admin
+            </Link>
+          ) : (
+            !user && (
+              <Link to="/signin" className="linkout">
+                Sign in
+              </Link>
+            )
+          )}
           <Link to="/saved" aria-label="Saved">
             <Icon name="heart" />
           </Link>
