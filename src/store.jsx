@@ -187,16 +187,22 @@ export function StoreProvider({ children }) {
           setSaved((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
         }),
 
+      // Returns { stripeUrl } when Stripe is live — the caller redirects there
+      // and the webhook finishes the job. Otherwise falls back to the demo path
+      // and returns { ref } so the loop is still demonstrable.
       checkout: (buyer) =>
         run(async () => {
           const orderId = await api.createOrder(buyer)
-          // Stripe replaces this line. See markOrderPaidDemo in lib/api.js.
+
+          const stripeUrl = await api.startStripeCheckout(orderId)
+          if (stripeUrl) return { stripeUrl }
+
           await api.markOrderPaidDemo(orderId)
           const fresh = await api.fetchOrders()
           setOrders(fresh)
           await loadShop()
           setBag([])
-          return fresh.find((o) => o.id === orderId)?.ref ?? ''
+          return { ref: fresh.find((o) => o.id === orderId)?.ref ?? '' }
         }),
 
       togglePacked: (ref, key) =>
