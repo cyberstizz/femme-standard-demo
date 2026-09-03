@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { useStore, compressImage } from '../store'
+import { useStore } from '../store'
 import { Icon } from '../ui'
 import { CONDITIONS } from '../data/pieces'
 
@@ -15,7 +15,6 @@ const blank = {
   length: '',
   fabric: '',
   notes: '',
-  photos: [],
 }
 
 export default function ListPiece() {
@@ -26,6 +25,7 @@ export default function ListPiece() {
   const [busy, setBusy] = useState(false)
 
   const editing = routeId ? byId(routeId) : null
+
   const [f, setF] = useState(() =>
     editing
       ? {
@@ -35,77 +35,111 @@ export default function ListPiece() {
           bust: editing.measurements?.bust ?? '',
           waist: editing.measurements?.waist ?? '',
           length: editing.measurements?.length ?? '',
-          photos: editing.photos ?? [],
         }
       : { ...blank, categoryId: categories[0]?.id ?? '' },
   )
 
+  // Photos already in Storage, plus files chosen but not uploaded yet.
+  const [saved, setSaved] = useState(() =>
+    (editing?.photos ?? []).map((url, i) => ({ url, path: editing.photoPaths?.[i] })),
+  )
+  const [added, setAdded] = useState([])
+  const [removePaths, setRemovePaths] = useState([])
+
+  useEffect(() => () => added.forEach((a) => URL.revokeObjectURL(a.url)), [added])
+
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
 
-  const pickPhotos = async (e) => {
-    const files = [...e.target.files].slice(0, 8 - f.photos.length)
-    if (!files.length) return
+  const pickPhotos = (e) => {
+    const files = [...e.target.files].slice(0, 8 - saved.length - added.length)
+    setAdded((cur) => [...cur, ...files.map((file) => ({ file, url: URL.createObjectURL(file) }))])
+    e.target.value = ''
+  }
+
+  const removeSaved = (path) => {
+    setRemovePaths((r) => [...r, path])
+    setSaved((s) => s.filter((p) => p.path !== path))
+  }
+  const removeAdded = (i) => setAdded((a) => a.filter((_, n) => n !== i))
+
+  const ready = f.title.trim() && f.price && !busy
+  const canAddMore = saved.length + added.length < 8
+
+  const publish = async (status) => {
     setBusy(true)
     try {
-      const next = []
-      for (const file of files) next.push(await compressImage(file))
-      setF((cur) => ({ ...cur, photos: [...cur.photos, ...next] }))
-    } finally {
+      await savePiece(
+        {
+          id: editing?.id,
+          title: f.title.trim() || 'Untitled piece',
+          categoryId: f.categoryId || null,
+          size: f.size,
+          condition: f.condition,
+          price: Number(f.price) || 0,
+          status,
+          silhouette: silhouetteFor(f.categoryId, categories),
+          worn: editing?.worn ?? 'Worn once',
+          fabric: f.fabric,
+          notes: f.notes,
+          measurements:
+            f.bust || f.waist || f.length
+              ? {
+                  ...(f.bust && { bust: f.bust }),
+                  ...(f.waist && { waist: f.waist }),
+                  ...(f.length && { length: f.length }),
+                }
+              : null,
+        },
+        added.map((a) => a.file),
+        removePaths,
+      )
+      nav('/admin/pieces')
+    } catch {
       setBusy(false)
-      e.target.value = ''
     }
   }
 
-  const removePhoto = (i) => setF({ ...f, photos: f.photos.filter((_, n) => n !== i) })
-
-  const ready = f.title.trim() && f.price
-
-  const publish = (status) => {
-    const id = editing?.id ?? `fs-${Date.now().toString(36)}`
-    savePiece({
-      id,
-      title: f.title.trim() || 'Untitled piece',
-      categoryId: f.categoryId,
-      size: f.size,
-      condition: f.condition,
-      price: Number(f.price) || 0,
-      photos: f.photos,
-      silhouette: editing?.silhouette ?? silhouetteFor(f.categoryId, categories),
-      status,
-      views: editing?.views ?? 0,
-      saves: editing?.saves ?? 0,
-      worn: editing?.worn ?? 'Worn once',
-      fabric: f.fabric,
-      notes: f.notes,
-      measurements:
-        f.bust || f.waist || f.length
-          ? { ...(f.bust && { bust: f.bust }), ...(f.waist && { waist: f.waist }), ...(f.length && { length: f.length }) }
-          : null,
-    })
-    nav('/admin/pieces')
+  const remove = async () => {
+    if (!editing) return
+    setBusy(true)
+    try {
+      await deletePiece(editing.id)
+      nav('/admin/pieces')
+    } catch {
+      setBusy(false)
+    }
   }
-
-  const canAddMore = f.photos.length < 8
 
   return (
     <>
       <div className="appbar">
         <div className="title">{editing ? 'Edit piece' : 'List a piece'}</div>
-        <button className="icons" style={{ color: 'var(--muted)', fontSize: 11, letterSpacing: '.14em' }} onClick={() => publish('draft')}>
-          SAVE DRAFT
+        <button className="linkout" style={{ color: 'var(--muted)' }} onClick={() => publish('draft')} disabled={busy}>
+          Save draft
         </button>
       </div>
 
       <div className="view">
         <div className="form">
           <div className="field">
-            <div className="lb">Photos · 4 recommended {busy && '· working…'}</div>
+            <div className="lb">
+              Photos · 4 recommended{busy && ' · uploading…'}
+            </div>
             <div className="photos">
-              {f.photos.map((src, i) => (
-                <div className="ph" key={i}>
-                  <img src={src} alt="" />
+              {saved.map((p, i) => (
+                <div className="ph" key={p.path ?? i}>
+                  <img src={p.url} alt="" />
                   {i === 0 && <div className="cov">Cover</div>}
-                  <button className="rm" onClick={() => removePhoto(i)} aria-label="Remove photo">
+                  <button className="rm" onClick={() => removeSaved(p.path)} aria-label="Remove photo">
+                    ×
+                  </button>
+                </div>
+              ))}
+              {added.map((a, i) => (
+                <div className="ph" key={`new-${i}`}>
+                  <img src={a.url} alt="" />
+                  {saved.length === 0 && i === 0 && <div className="cov">Cover</div>}
+                  <button className="rm" onClick={() => removeAdded(i)} aria-label="Remove photo">
                     ×
                   </button>
                 </div>
@@ -116,17 +150,10 @@ export default function ListPiece() {
                 </button>
               )}
             </div>
-            {f.photos.length === 0 && (
+            {saved.length + added.length === 0 && (
               <p className="hint">Front, back, a close detail, and one on the mannequin.</p>
             )}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={pickPhotos}
-              style={{ display: 'none' }}
-            />
+            <input ref={fileRef} type="file" accept="image/*" multiple onChange={pickPhotos} style={{ display: 'none' }} />
           </div>
 
           <div className="field">
@@ -152,7 +179,7 @@ export default function ListPiece() {
           <div className="two">
             <div className="field">
               <div className="lb">Category</div>
-              <select className="input" value={f.categoryId} onChange={set('categoryId')}>
+              <select className="input" value={f.categoryId ?? ''} onChange={set('categoryId')}>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -198,6 +225,12 @@ export default function ListPiece() {
           </div>
 
           <p className="note">One of one is set automatically. Every piece publishes as a single quantity.</p>
+
+          {editing && (
+            <button className="linkbtn" style={{ marginTop: 20, color: '#E0A0A0' }} onClick={remove} disabled={busy}>
+              Delete this piece
+            </button>
+          )}
         </div>
       </div>
 
@@ -206,15 +239,15 @@ export default function ListPiece() {
           Cancel
         </Link>
         <button className="btn" disabled={!ready} onClick={() => publish('live')}>
-          Publish
+          {busy ? 'Saving…' : 'Publish'}
         </button>
       </div>
     </>
   )
 }
 
-// The stand-in drawing comes from whichever category the piece is filed under,
-// so adding a new category automatically gives its pieces the right placeholder.
+// The stand-in drawing comes from the category, so a new category automatically
+// gives its pieces the right placeholder until real photos are added.
 function silhouetteFor(categoryId, categories) {
   return categories.find((c) => c.id === categoryId)?.silhouette ?? 'dress'
 }

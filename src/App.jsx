@@ -1,5 +1,5 @@
 import { Routes, Route, useLocation, Navigate, Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useStore } from './store'
 import { SiteHeader, AdminSidebar } from './ui'
 
@@ -38,28 +38,36 @@ function RequireOwner({ children }) {
   return isOwner ? children : <Navigate to={`/signin?next=${encodeURIComponent(pathname)}`} replace />
 }
 
-function DemoBar({ onHide }) {
-  const { reset, quotaFull } = useStore()
+function Banner() {
+  const { error, clearError } = useStore()
   return (
     <div className="demo">
-      <span>{quotaFull ? 'Storage full — photos held for this session only' : 'Demo · sample data, no payments taken'}</span>
-      <span style={{ display: 'flex', gap: 14, flex: '0 0 auto' }}>
-        <button onClick={reset}>Reset</button>
-        <button onClick={onHide}>Hide</button>
-      </span>
+      <span>{error ? `Something went wrong: ${error}` : 'Demo · no payments are taken'}</span>
+      {error && (
+        <span style={{ display: 'flex', gap: 14, flex: '0 0 auto' }}>
+          <button onClick={clearError}>Dismiss</button>
+        </span>
+      )}
     </div>
   )
 }
 
 export default function App() {
   const { pathname } = useLocation()
-  const { isOwner } = useStore()
-  const [demoHidden, setDemoHidden] = useState(false)
+  const { isOwner, loading } = useStore()
   const inAdmin = pathname.startsWith('/admin') && isOwner
 
+  if (loading) {
+    return (
+      <div className="app">
+        <div className="booting">Loading the shop…</div>
+      </div>
+    )
+  }
+
   return (
-    <div className={`app${inAdmin ? ' is-admin' : ''}${demoHidden ? '' : ' has-demo'}`}>
-      {!demoHidden && <DemoBar onHide={() => setDemoHidden(true)} />}
+    <div className={`app${inAdmin ? ' is-admin' : ''} has-demo`}>
+      <Banner />
       {inAdmin ? <AdminSidebar /> : <SiteHeader />}
       <div className="main">
         <ScrollTop />

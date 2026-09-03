@@ -6,8 +6,10 @@ import { Icon, Shot, Empty } from '../ui'
 export default function Piece() {
   const { id } = useParams()
   const nav = useNavigate()
-  const { byId, addToBag, inBag, isSaved, toggleSaved, settings } = useStore()
+  const { byId, addToBag, inBag, isSaved, toggleSaved, settings, user } = useStore()
   const [shot, setShot] = useState(0)
+  const [claiming, setClaiming] = useState(false)
+  const [lost, setLost] = useState(false)
 
   const piece = byId(id)
   if (!piece) return <Empty title="Piece not found" body="It may have sold and been removed." action="Back to shop" to="/" />
@@ -118,8 +120,18 @@ export default function Piece() {
             In your bag · view
           </Link>
         ) : (
-          <button className="btn" onClick={() => { addToBag(piece.id); nav('/bag') }}>
-            Add to bag · holds {settings.holdMinutes} min
+          <button
+            className="btn"
+            disabled={claiming}
+            onClick={async () => {
+              if (!user) return nav(`/signin?next=/piece/${piece.id}`)
+              setClaiming(true)
+              const won = await addToBag(piece.id)
+              if (won) nav('/bag')
+              else { setLost(true); setClaiming(false) }
+            }}
+          >
+            {claiming ? 'Holding it…' : lost ? 'Just sold — someone was faster' : `Add to bag · holds ${settings.holdMinutes} min`}
           </button>
         )}
         <button

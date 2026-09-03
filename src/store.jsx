@@ -1,188 +1,254 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { SEED_PIECES, SAVED_SEED, CATEGORY_SEED, SETTINGS_SEED } from './data/pieces'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { supabase } from './lib/supabase'
+import * as api from './lib/api'
 
-const KEY = 'fs-demo-v2'
 const Ctx = createContext(null)
 export const useStore = () => useContext(Ctx)
 
-const fresh = () => ({
-  pieces: SEED_PIECES,
-  categories: CATEGORY_SEED,
-  settings: SETTINGS_SEED,
-  bag: [],
-  saved: SAVED_SEED,
-  orders: [],
-  mySize: 'M',
-  alerts: true,
-  user: null,
-})
-
-function load() {
-  try {
-    const d = JSON.parse(localStorage.getItem(KEY))
-    if (!d || !Array.isArray(d.pieces) || !Array.isArray(d.categories)) return null
-    return { ...fresh(), ...d, settings: { ...SETTINGS_SEED, ...(d.settings ?? {}) } }
-  } catch {
-    return null
-  }
+// Shown until the first load returns, so nothing reads undefined settings.
+const DEFAULT_SETTINGS = {
+  storeName: 'The Femme Standard',
+  shipFrom: 'Miami',
+  freeShippingOver: 150,
+  flatShipping: 8,
+  taxRate: 0.07,
+  holdMinutes: 15,
+  storyEyebrow: 'The Standard',
+  storyTitle: '',
+  quote: '',
+  quoteBy: '',
+  storyBody: '',
 }
 
 export function StoreProvider({ children }) {
-  const [state, setState] = useState(() => load() ?? fresh())
-  const [quotaFull, setQuotaFull] = useState(false)
+  const [pieces, setPieces] = useState([])
+  const [categories, setCategories] = useState([])
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [bag, setBag] = useState([])
+  const [saved, setSaved] = useState([])
+  const [orders, setOrders] = useState([])
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  /* ---------------------------------------------------------- loading -- */
+
+  const loadShop = useCallback(async () => {
+    const shop = await api.fetchShop()
+    setPieces(shop.pieces)
+    setCategories(shop.categories)
+    setSettings({ ...DEFAULT_SETTINGS, ...shop.settings })
+  }, [])
+
+  // Everything that only exists for a signed-in person.
+  const loadMine = useCallback(async (profile) => {
+    if (!profile) {
+      setBag([])
+      setSaved([])
+      setOrders([])
+      return
+    }
+    const [holds, savedIds, myOrders] = await Promise.all([
+      api.fetchMyHolds(),
+      api.fetchSaved(),
+      api.fetchOrders(),
+    ])
+    setBag(holds)
+    setSaved(savedIds)
+    setOrders(myOrders)
+  }, [])
+
+  const refresh = useCallback(
+    async (profile = user) => {
+      try {
+        await Promise.all([loadShop(), loadMine(profile)])
+        setError(null)
+      } catch (e) {
+        setError(e.message ?? String(e))
+      }
+    },
+    [loadShop, loadMine, user],
+  )
 
   useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(state))
-      setQuotaFull(false)
-    } catch {
-      setQuotaFull(true)
-    }
-  }, [state])
+    let alive = true
 
-  // Expired holds go back on sale.
+    const boot = async () => {
+      try {
+        const profile = await api.fetchProfile()
+        if (!alive) return
+        setUser(profile)
+        await Promise.all([loadShop(), loadMine(profile)])
+      } catch (e) {
+        if (alive) setError(e.message ?? String(e))
+      } finally {
+        if (alive) setLoading(false)
+      }
+    }
+    boot()
+
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event !== 'SIGNED_IN' && event !== 'SIGNED_OUT' && event !== 'USER_UPDATED') return
+      const profile = await api.fetchProfile()
+      if (!alive) return
+      setUser(profile)
+      await Promise.all([loadShop(), loadMine(profile)])
+    })
+
+    return () => {
+      alive = false
+      sub.subscription.unsubscribe()
+    }
+  }, [loadShop, loadMine])
+
+  // Drop holds locally the moment they lapse; the database frees them too.
   useEffect(() => {
     const t = setInterval(() => {
-      setState((s) => {
-        const live = s.bag.filter((b) => b.heldUntil > Date.now())
-        return live.length === s.bag.length ? s : { ...s, bag: live }
+      setBag((b) => {
+        const live = b.filter((h) => h.heldUntil > Date.now())
+        return live.length === b.length ? b : live
       })
     }, 1000)
     return () => clearInterval(t)
   }, [])
 
-  const api = useMemo(() => {
-    const patch = (fn) => setState(fn)
-    const { settings, categories } = state
+  /* ---------------------------------------------------------- actions -- */
+
+  const value = useMemo(() => {
+    const run = async (fn) => {
+      try {
+        const out = await fn()
+        setError(null)
+        return out
+      } catch (e) {
+        setError(e.message ?? String(e))
+        throw e
+      }
+    }
 
     return {
-      ...state,
-      quotaFull,
-      isOwner: state.user?.role === 'owner',
+      pieces,
+      categories,
+      settings,
+      bag,
+      saved,
+      orders,
+      user,
+      loading,
+      error,
+      clearError: () => setError(null),
+      isOwner: user?.role === 'owner',
+      mySize: user?.size ?? 'M',
+      alerts: user?.alerts ?? true,
 
-      byId: (id) => state.pieces.find((p) => p.id === id),
-      live: () => state.pieces.filter((p) => p.status === 'live'),
-      inBag: (id) => state.bag.some((b) => b.id === id),
-      isSaved: (id) => state.saved.includes(id),
-
+      byId: (id) => pieces.find((p) => p.id === id),
+      live: () => pieces.filter((p) => p.status === 'live'),
+      inBag: (id) => bag.some((b) => b.id === id),
+      isSaved: (id) => saved.includes(id),
       categoryById: (id) => categories.find((c) => c.id === id) ?? null,
       categoryName: (id) => categories.find((c) => c.id === id)?.name ?? 'Uncategorised',
-      countIn: (id) => state.pieces.filter((p) => p.categoryId === id).length,
+      countIn: (id) => pieces.filter((p) => p.categoryId === id).length,
 
-      /* ---------- shopping ---------- */
-      addToBag: (id) =>
-        patch((s) =>
-          s.bag.some((b) => b.id === id)
-            ? s
-            : { ...s, bag: [...s.bag, { id, heldUntil: Date.now() + settings.holdMinutes * 60000 }] },
-        ),
-      removeFromBag: (id) => patch((s) => ({ ...s, bag: s.bag.filter((b) => b.id !== id) })),
-      toggleSaved: (id) =>
-        patch((s) => ({
-          ...s,
-          saved: s.saved.includes(id) ? s.saved.filter((x) => x !== id) : [...s.saved, id],
-        })),
-      setMySize: (mySize) => patch((s) => ({ ...s, mySize })),
-      setAlerts: (alerts) => patch((s) => ({ ...s, alerts })),
+      refresh: () => refresh(user),
 
-      /* ---------- accounts ---------- */
-      signIn: (email) =>
-        patch((s) => ({
-          ...s,
-          user: { role: 'shopper', email, name: nameFrom(email) },
-        })),
-      signInOwner: () =>
-        patch((s) => ({
-          ...s,
-          user: { role: 'owner', email: 'latavia@thefemmestandard.com', name: 'Latavia' },
-        })),
-      signOut: () => patch((s) => ({ ...s, user: null })),
+      /* ---- auth ---- */
+      signIn: (email, password) => run(() => api.signInWithPassword(email, password)),
+      signUp: (email, password) => run(() => api.signUpWithPassword(email, password)),
+      signOut: () => run(async () => { await api.signOut(); setUser(null) }),
+      changePassword: (password) => run(() => api.updatePassword(password)),
 
-      /* ---------- orders ---------- */
-      checkout: (buyer) => {
-        const ref = 1043 + state.orders.length
-        patch((s) => {
-          const ids = s.bag.map((b) => b.id)
-          return {
-            ...s,
-            pieces: s.pieces.map((p) => (ids.includes(p.id) ? { ...p, status: 'sold', soldInDays: 0 } : p)),
-            bag: [],
-            orders: [
-              { ref, ids, buyer, placedAt: Date.now(), packed: { steamed: false, card: false, label: false } },
-              ...s.orders,
-            ],
-          }
-        })
-        return ref
-      },
-      togglePacked: (ref, key) =>
-        patch((s) => ({
-          ...s,
-          orders: s.orders.map((o) =>
-            o.ref === ref ? { ...o, packed: { ...o.packed, [key]: !o.packed[key] } } : o,
-          ),
-        })),
-
-      /* ---------- pieces (admin) ---------- */
-      savePiece: (piece) =>
-        patch((s) => ({
-          ...s,
-          pieces: s.pieces.some((p) => p.id === piece.id)
-            ? s.pieces.map((p) => (p.id === piece.id ? { ...p, ...piece } : p))
-            : [piece, ...s.pieces],
-        })),
-      deletePiece: (id) => patch((s) => ({ ...s, pieces: s.pieces.filter((p) => p.id !== id) })),
-      setPieceStatus: (id, status) =>
-        patch((s) => ({ ...s, pieces: s.pieces.map((p) => (p.id === id ? { ...p, status } : p)) })),
-
-      /* ---------- categories (admin) ---------- */
-      addCategory: (name, silhouette) =>
-        patch((s) => ({
-          ...s,
-          categories: [...s.categories, { id: `c-${Date.now().toString(36)}`, name, silhouette }],
-        })),
-      updateCategory: (id, changes) =>
-        patch((s) => ({
-          ...s,
-          categories: s.categories.map((c) => (c.id === id ? { ...c, ...changes } : c)),
-        })),
-      moveCategory: (id, dir) =>
-        patch((s) => {
-          const i = s.categories.findIndex((c) => c.id === id)
-          const j = i + dir
-          if (i < 0 || j < 0 || j >= s.categories.length) return s
-          const next = [...s.categories]
-          ;[next[i], next[j]] = [next[j], next[i]]
-          return { ...s, categories: next }
+      setMySize: (size) =>
+        run(async () => {
+          await api.updateProfile({ size })
+          setUser((u) => (u ? { ...u, size } : u))
         }),
-      // Pieces are never orphaned: they move to the category you choose.
+      setAlerts: (alerts) =>
+        run(async () => {
+          await api.updateProfile({ alerts })
+          setUser((u) => (u ? { ...u, alerts } : u))
+        }),
+
+      /* ---- shopping ---- */
+      // Returns false when someone else claimed it first.
+      addToBag: (id) =>
+        run(async () => {
+          const won = await api.claimPiece(id)
+          await refresh(user)
+          return won
+        }),
+      removeFromBag: (id) =>
+        run(async () => {
+          await api.releasePiece(id)
+          await refresh(user)
+        }),
+      toggleSaved: (id) =>
+        run(async () => {
+          await api.toggleSaved(id, saved.includes(id))
+          setSaved((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
+        }),
+
+      checkout: (buyer) =>
+        run(async () => {
+          const orderId = await api.createOrder(buyer)
+          // Stripe replaces this line. See markOrderPaidDemo in lib/api.js.
+          await api.markOrderPaidDemo(orderId)
+          const fresh = await api.fetchOrders()
+          setOrders(fresh)
+          await loadShop()
+          setBag([])
+          return fresh.find((o) => o.id === orderId)?.ref ?? ''
+        }),
+
+      togglePacked: (ref, key) =>
+        run(async () => {
+          const order = orders.find((o) => o.ref === ref)
+          if (!order) return
+          const packed = { ...order.packed, [key]: !order.packed[key] }
+          await api.setPacked(ref, packed)
+          setOrders((os) => os.map((o) => (o.ref === ref ? { ...o, packed } : o)))
+        }),
+
+      /* ---- admin ---- */
+      savePiece: (piece, files = [], removePaths = []) =>
+        run(async () => {
+          const id = await api.savePiece(piece, files)
+          for (const path of removePaths) await api.deletePhoto(piece.id, path)
+          await loadShop()
+          return id
+        }),
+      deletePiece: (id) => run(async () => { await api.deletePiece(id); await loadShop() }),
+      setPieceStatus: (id, status) =>
+        run(async () => { await api.savePiece({ ...pieces.find((p) => p.id === id), status }); await loadShop() }),
+
+      addCategory: (name, silhouette) =>
+        run(async () => { await api.addCategory(name, silhouette, categories.length); await loadShop() }),
+      updateCategory: (id, changes) =>
+        run(async () => {
+          setCategories((cs) => cs.map((c) => (c.id === id ? { ...c, ...changes } : c)))
+          await api.updateCategory(id, changes)
+        }),
+      moveCategory: (id, dir) =>
+        run(async () => {
+          const i = categories.findIndex((c) => c.id === id)
+          const j = i + dir
+          if (i < 0 || j < 0 || j >= categories.length) return
+          const next = [...categories]
+          ;[next[i], next[j]] = [next[j], next[i]]
+          setCategories(next)
+          await api.reorderCategories(next)
+        }),
       deleteCategory: (id, moveToId) =>
-        patch((s) => ({
-          ...s,
-          categories: s.categories.filter((c) => c.id !== id),
-          pieces: s.pieces.map((p) => (p.categoryId === id ? { ...p, categoryId: moveToId } : p)),
-        })),
+        run(async () => { await api.deleteCategory(id, moveToId); await loadShop() }),
 
-      /* ---------- settings (admin) ---------- */
-      updateSettings: (changes) => patch((s) => ({ ...s, settings: { ...s.settings, ...changes } })),
-
-      reset: () => {
-        localStorage.removeItem(KEY)
-        setState(fresh())
-      },
+      updateSettings: (changes) =>
+        run(async () => {
+          setSettings((s) => ({ ...s, ...changes }))
+          await api.updateSettings(changes)
+        }),
     }
-  }, [state, quotaFull])
+  }, [pieces, categories, settings, bag, saved, orders, user, loading, error, refresh, loadShop, loadMine])
 
-  return <Ctx.Provider value={api}>{children}</Ctx.Provider>
-}
-
-function nameFrom(email) {
-  const raw = String(email).split('@')[0].replace(/[._-]+/g, ' ').trim()
-  if (!raw) return 'Shopper'
-  return raw
-    .split(' ')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ')
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 
 export function useCountdown(until) {
@@ -195,20 +261,6 @@ export function useCountdown(until) {
   const m = Math.floor(left / 60000)
   const s = Math.floor((left % 60000) / 1000)
   return { left, label: `${m}:${String(s).padStart(2, '0')}` }
-}
-
-// Real build swaps this for a direct upload to Supabase Storage, keeping only the URL.
-export async function compressImage(file, max = 900, quality = 0.75) {
-  const bitmap = await createImageBitmap(file)
-  const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height))
-  const w = Math.round(bitmap.width * scale)
-  const h = Math.round(bitmap.height * scale)
-  const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
-  canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h)
-  bitmap.close?.()
-  return canvas.toDataURL('image/jpeg', quality)
 }
 
 export const money = (n) => `$${Number(n).toFixed(2).replace(/\.00$/, '')}`

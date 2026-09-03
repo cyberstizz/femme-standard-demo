@@ -2,41 +2,53 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useStore } from '../store'
 
-// One sign-in for everyone. Who you are is decided by your account, not by
-// which door you came through — Latavia signs in here exactly like a shopper,
-// and lands in Admin because her profile says so.
-export const OWNER_EMAIL = 'latavia@thefemmestandard.com'
-
+// One sign-in for everyone. Who you are is decided by your account, not by which
+// door you came through — Latavia signs in here exactly like a shopper and lands
+// in Admin because her profile says owner.
 export default function SignIn() {
-  const { signIn, signInOwner, settings } = useStore()
+  const { signIn, signUp, settings, error, clearError } = useStore()
   const nav = useNavigate()
   const [params] = useSearchParams()
   const next = params.get('next')
   const wantsAdmin = next?.startsWith('/admin')
-  const [email, setEmail] = useState('')
-  const valid = email.includes('@')
 
-  const go = () => {
-    if (!valid) return
-    if (email.trim().toLowerCase() === OWNER_EMAIL) {
-      signInOwner()
-      nav(next || '/admin', { replace: true })
-    } else {
-      signIn(email.trim())
-      nav(next && !wantsAdmin ? next : '/account', { replace: true })
+  const [mode, setMode] = useState('in')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const valid = email.includes('@') && password.length >= 6
+
+  const go = async () => {
+    if (!valid || busy) return
+    setBusy(true)
+    try {
+      if (mode === 'in') await signIn(email.trim(), password)
+      else await signUp(email.trim(), password)
+      nav(next || '/', { replace: true })
+    } catch {
+      // the store surfaces the message below
+    } finally {
+      setBusy(false)
     }
+  }
+
+  const swap = (m) => {
+    clearError()
+    setMode(m)
   }
 
   return (
     <div className="view">
       <div className="gate">
         <div className="k">{settings.storeName}</div>
-        <h4>{wantsAdmin ? 'Sign in to your shop' : 'Sign in'}</h4>
+        <h4>{mode === 'in' ? (wantsAdmin ? 'Sign in to your shop' : 'Sign in') : 'Create an account'}</h4>
         <p>
-          {wantsAdmin
-            ? 'Use the email on your account. If it’s the shop owner’s, you’ll land in Admin.'
-            : 'We email you a link — no password. An account keeps your size, your saved pieces, and your orders.'}
+          {mode === 'in'
+            ? 'Your account keeps your size, your saved pieces, and your orders.'
+            : 'Pick any password of six characters or more. Nothing is emailed to you.'}
         </p>
+
         <input
           className="input"
           style={{ marginTop: 24 }}
@@ -46,24 +58,31 @@ export default function SignIn() {
           placeholder="you@email.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && go()}
           aria-label="Email address"
         />
-        <button className="btn" style={{ marginTop: 14 }} disabled={!valid} onClick={go}>
-          Email me a link
+        <input
+          className="input"
+          style={{ marginTop: 12 }}
+          type="password"
+          autoComplete={mode === 'in' ? 'current-password' : 'new-password'}
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && go()}
+          aria-label="Password"
+        />
+
+        {error && <div className="formerror">{error}</div>}
+
+        <button className="btn" style={{ marginTop: 14 }} disabled={!valid || busy} onClick={go}>
+          {busy ? 'One moment…' : mode === 'in' ? 'Sign in' : 'Create account'}
         </button>
 
-        <div className="demo-hint">
-          <b>Demo</b>
-          Any address signs in as a shopper.
-          <br />
-          <button className="linkbtn" onClick={() => setEmail(OWNER_EMAIL)}>
-            {OWNER_EMAIL}
-          </button>{' '}
-          signs in as the owner.
-        </div>
+        <button className="linkbtn" style={{ marginTop: 18 }} onClick={() => swap(mode === 'in' ? 'up' : 'in')}>
+          {mode === 'in' ? 'New here? Create an account' : 'Already have an account? Sign in'}
+        </button>
 
-        <Link to="/" className="linkout" style={{ display: 'inline-block', marginTop: 22 }}>
+        <Link to="/" className="linkout" style={{ display: 'block', marginTop: 22 }}>
           Keep browsing
         </Link>
       </div>

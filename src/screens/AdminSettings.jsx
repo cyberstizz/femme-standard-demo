@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { useStore } from '../store'
 import { AdminNav } from '../ui'
 
 export default function AdminSettings() {
-  const { settings, updateSettings, signOut } = useStore()
+  const { settings, updateSettings, signOut, changePassword, user } = useStore()
+  const [pw, setPw] = useState('')
+  const [pwDone, setPwDone] = useState(false)
   const set = (k) => (e) => updateSettings({ [k]: e.target.value })
   const setNum = (k) => (e) => updateSettings({ [k]: Number(e.target.value) || 0 })
 
@@ -77,6 +80,33 @@ export default function AdminSettings() {
             <textarea className="input" rows="6" value={settings.storyBody} onChange={set('storyBody')} />
             <p className="hint">Leave a blank line between paragraphs.</p>
           </div>
+
+          <div className="rule" />
+          <div className="lab">Your sign-in</div>
+          <div className="field">
+            <div className="lb">Email</div>
+            <input className="input" value={user?.email ?? ''} readOnly />
+            <p className="hint">Changing the email is done in Supabase → Authentication → Users.</p>
+          </div>
+          <div className="field">
+            <div className="lb">New password</div>
+            <input
+              className="input"
+              type="password"
+              autoComplete="new-password"
+              placeholder="At least 6 characters"
+              value={pw}
+              onChange={(e) => { setPw(e.target.value); setPwDone(false) }}
+            />
+          </div>
+          <button
+            className="btn quiet"
+            style={{ width: '100%' }}
+            disabled={pw.length < 6}
+            onClick={async () => { await changePassword(pw); setPw(''); setPwDone(true) }}
+          >
+            {pwDone ? 'Password changed' : 'Change password'}
+          </button>
 
           <div className="rule" />
           <button className="btn quiet" onClick={signOut} style={{ width: '100%' }}>

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useStore, useCountdown, money } from '../store'
 import { Shot, TabBar, Empty } from '../ui'
@@ -30,6 +31,7 @@ function BagLine({ entry }) {
 
 export default function Bag() {
   const { bag, byId, checkout, settings, user } = useStore()
+  const [placing, setPlacing] = useState(false)
   const nav = useNavigate()
 
   const items = bag.map((b) => ({ b, p: byId(b.id) })).filter((x) => x.p)
@@ -41,10 +43,15 @@ export default function Bag() {
   const soonest = bag.length ? Math.min(...bag.map((b) => b.heldUntil)) : 0
   const { label } = useCountdown(soonest)
 
-  const place = () => {
+  const place = async () => {
     if (!user) return nav('/signin?next=/bag')
-    const ref = checkout({ name: user.name, line1: '1420 NW 62nd St, Apt 3B', city: 'Miami, FL 33142' })
-    nav(`/confirmed/${ref}`)
+    setPlacing(true)
+    try {
+      const ref = await checkout({ name: user.name, line1: '1420 NW 62nd St, Apt 3B', city: 'Miami, FL 33142' })
+      nav(`/confirmed/${ref}`)
+    } catch {
+      setPlacing(false)
+    }
   }
 
   return (
@@ -103,8 +110,8 @@ export default function Bag() {
 
       {items.length > 0 && (
         <div className="cta">
-          <button className="btn" onClick={place}>
-            {user ? `Checkout · ${money(total)}` : 'Sign in to check out'}
+          <button className="btn" onClick={place} disabled={placing}>
+            {placing ? 'Placing order…' : user ? `Checkout · ${money(total)}` : 'Sign in to check out'}
           </button>
         </div>
       )}

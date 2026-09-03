@@ -23,6 +23,7 @@ export function toPiece(row) {
     views: row.views ?? 0,
     saves: row.saves ?? 0,
     soldAt: row.sold_at,
+    photoPaths: (row.piece_photos ?? []).sort((a, b) => a.position - b.position).map((p) => p.path),
     photos: (row.piece_photos ?? [])
       .sort((a, b) => a.position - b.position)
       .map((p) => photoUrl(p.path)),
@@ -230,10 +231,47 @@ export async function setPacked(orderRef, packed) {
 
 /* ------------------------------------------------------------------- auth -- */
 
-export async function sendMagicLink(email) {
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.origin },
+// Password auth, deliberately. Latavia signs in many times a day and must never
+// be locked out of her own inventory because an email didn't arrive. Magic links
+// can come later for shoppers, once a real SMTP provider is configured.
+export async function signInWithPassword(email, password) {
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) throw error
+}
+
+export async function signUpWithPassword(email, password) {
+  const { data, error } = await supabase.auth.signUp({ email, password })
+  if (error) throw error
+  // With "Confirm email" switched off in Supabase, a session comes back straight away.
+  if (!data.session) {
+    await supabase.auth.signInWithPassword({ email, password })
+  }
+}
+
+export async function updatePassword(password) {
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) throw error
+}
+
+export async function updateProfile(changes) {
+  const { data: session } = await supabase.auth.getUser()
+  if (!session?.user) return
+  const row = {}
+  if (changes.size !== undefined) row.size = changes.size
+  if (changes.alerts !== undefined) row.alert_size = changes.alerts
+  if (changes.name !== undefined) row.full_name = changes.name
+  const { error } = await supabase.from('profiles').update(row).eq('id', session.user.id)
+  if (error) throw error
+}
+
+// TEMPORARY. Stripe will own this once payments are live: the webhook calls
+// mark_order_paid, and this client-side call must be removed along with
+//   revoke execute on function public.mark_order_paid(uuid, text) from authenticated;
+// Until then it lets the full buy -> sold -> ship loop be demonstrated.
+export async function markOrderPaidDemo(orderId) {
+  const { error } = await supabase.rpc('mark_order_paid', {
+    p_order: orderId,
+    p_intent: `demo_${Date.now()}`,
   })
   if (error) throw error
 }
@@ -245,8 +283,14 @@ export async function signOut() {
 export async function fetchProfile() {
   const { data: session } = await supabase.auth.getUser()
   if (!session?.user) return null
-  const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
-  return data
-    ? { id: data.id, email: session.user.email, name: data.full_name, role: data.role, size: data.size }
-    : null
+  const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle()
+  if (!data) return null
+  return {
+    id: data.id,
+    email: session.user.email,
+    name: data.full_name || session.user.email.split('@')[0],
+    role: data.role,
+    size: data.size || 'M',
+    alerts: data.alert_size ?? true,
+  }
 }
