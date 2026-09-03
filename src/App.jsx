@@ -1,6 +1,7 @@
 import { Routes, Route, useLocation, Navigate, Link } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useStore } from './store'
+import { configError } from './lib/supabase'
 import { SiteHeader, AdminSidebar } from './ui'
 
 import Shop from './screens/Shop'
@@ -56,6 +57,29 @@ export default function App() {
   const { pathname } = useLocation()
   const { isOwner, loading } = useStore()
   const inAdmin = pathname.startsWith('/admin') && isOwner
+
+  if (configError) {
+    return (
+      <div className="app">
+        <div className="setup">
+          <div className="k">Not configured</div>
+          <h4>{configError}</h4>
+          <p>
+            Set both variables in <b>Netlify → Site configuration → Environment variables</b>, then
+            redeploy. Vite reads them when the site is built, so an existing deploy won’t pick them
+            up on its own.
+          </p>
+          <pre>
+VITE_SUPABASE_URL=https://YOUR-REF.supabase.co{'\n'}VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_…
+          </pre>
+          <p className="hint">
+            Both values: Supabase → your project → <b>Connect</b> → App Frameworks → React / Vite.
+            Editing <code>.env.example</code> has no effect — it’s only a template.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (

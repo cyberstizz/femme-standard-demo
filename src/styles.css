@@ -509,3 +509,10 @@ textarea.input{resize:vertical;line-height:1.55}
 .piece-layout .cta{position:sticky;bottom:0;z-index:2}
 .booting{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;letter-spacing:.22em;text-transform:uppercase}
 .formerror{margin-top:14px;border-left:1px solid #C24141;padding:10px 12px;font-size:12.5px;color:#E0A0A0;line-height:1.5;text-align:left;background:rgba(194,65,65,.07)}
+.setup{max-width:620px;margin:70px auto;padding:40px 32px;border:1px solid var(--line);border-radius:3px;background:var(--onyx)}
+.setup .k{font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold)}
+.setup h4{font-family:var(--serif);font-size:24px;font-weight:400;margin-top:10px;line-height:1.3}
+.setup p{font-size:13.5px;color:var(--muted);margin-top:14px;line-height:1.7}
+.setup b{color:var(--bone);font-weight:400}
+.setup code{color:var(--champagne)}
+.setup pre{margin-top:18px;padding:14px;background:var(--ink);border:1px solid var(--hair);border-radius:2px;font-size:12px;color:var(--champagne);overflow-x:auto;white-space:pre-wrap;word-break:break-all}
