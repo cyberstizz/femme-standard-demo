@@ -1,6 +1,11 @@
 [build]
   command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions"
+
+# Stripe signs the raw request body, so it must not be transformed.
+[functions."stripe-webhook"]
+  included_files = []
 
 [[redirects]]
   from = "/*"
